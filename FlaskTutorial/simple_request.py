@@ -12,7 +12,7 @@ def predict_result(image_path):
 
     # r = requests.get(PyTorch_REST_API_URL)
     # Submit the request.
-    r = requests.post(PyTorch_REST_API_URL, files=payload).json()
+    r = requests.post(PyTorch_REST_API_URL, files=payload)
     r.raise_for_status()
 
     # Ensure the request was successful.
