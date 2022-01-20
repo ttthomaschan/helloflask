@@ -8,8 +8,10 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 import io
+import settings
 
 app = Flask(__name__)
+app.config.from_object(settings)
 model = None
 use_gpu = True
 
@@ -99,4 +101,4 @@ if __name__ == '__main__':
     #先加载模型
     load_model()
     #再开启服务
-    app.run()
+    app.run(host="192.168.30.41", port=8080)

@@ -3,58 +3,73 @@ import argparse
 import json
 import cv2
 import numpy as np
+import xlrd
+import xlwt
+from xlutils.copy import copy
+import pdfExtraction
 
 # Initialize the PyTorch REST API endpoint URL.
 FILE_STATION_UPLOAD_URL = 'http://file.sit.elimen.com.cn:8899/edfs/file/upload'
 FILE_STATION_DOWNLOAD_URL = 'http://file.sit.elimen.com.cn:8899/edfs/file/download'
+DEBUG_MODE = True
 
 def upload_file(image_path):
     # Initialize image path
     image = open(image_path, 'rb') ## 与 open(image_path, 'rb').read() 区别 ？？
 
     ## Debug
-    img_tmp = cv2.imdecode(np.frombuffer(image.read(), np.uint8), cv2.IMREAD_COLOR)
-    cv2.imwrite("./img_tmp.jpeg", img_tmp)
+    if DEBUG_MODE:
+        img_tmp = cv2.imdecode(np.frombuffer(image.read(), np.uint8), cv2.IMREAD_COLOR)
+        cv2.imwrite("./img_tmp.jpeg", img_tmp)
 
     files = {'MultipartFile': image}
     data = {'fileType': "image", 'filePath': "fin", 'uploadLocation': "OSS", 'expireTime': 60}
 
     # Submit the request.
     r = requests.post(FILE_STATION_UPLOAD_URL, data=data, files=files).json()
-    print(r)
 
     # Ensure the request was successful.
-    if r['content'] :
+    if r['content']:
         # Loop over the predictions and display them.
         fileId = json.loads(r['content'])['fileId']
-        print('{}: {}'.format("fileId", fileId))
         return fileId
 
     # Otherwise, the request failed.
     else:
-        print(r['msg'])
-        return -1
+        return "Upload failed -- {}".format(r['msg'])
 
-def download_file(fileId):
+def download_file(fileId, fileType):
     # Initialize image path
     data = {'fileId': fileId}
 
     # Submit the request.
     r = requests.get(FILE_STATION_DOWNLOAD_URL, params=data)
-    img = cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
-    if img is not None:
-        print("Img downloaded from file station.")
+    data_bytes = r.content
 
-        ## Debug:
-        cv2.imwrite("./filedown.jpeg", img)
+    if fileType == "IMAGE":
+        img = cv2.imdecode(np.frombuffer(data_bytes, np.uint8), cv2.IMREAD_COLOR)
+        if img is not None:
+            print("Img downloaded from file station.")
+            ## Debug:
+            cv2.imwrite("./filedown.jpeg", img)
+            return img
+        else:
+            print("Fail to load img.")
+    elif fileType == "PDF" or fileType == "IMAGE":
+        img_dataset, pages = pdfExtraction.pdf2img(r.content, zoom_x=3, zoom_y=3)
 
-        return img
-    else:
-        print("Fail to load img.")
+        return img_dataset
+    elif fileType == "EXCEL":
+        excel_b = xlrd.open_workbook(file_contents=r.content, formatting_info=True)
+        # table = excel_b.sheets()[0]
+        # nrows = table.nrows
+        workbook = copy(excel_b)
+        workbook.save("rewrite.xls")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Classification demo')
-    parser.add_argument('--file', default='./insexp.jpeg', type=str, help='test image file')
-    args = parser.parse_args()
-    fileId = upload_file(args.file)
-    download_file(fileId)
+    # parser = argparse.ArgumentParser(description='Classification demo')
+    # parser.add_argument('--file', default='./insexp.jpeg', type=str, help='test image file')
+    # args = parser.parse_args()
+    # fileId = upload_file(args.file)
+    fileId = "211a1232f7d24da7a4f2d07ece52d7d5"
+    download_file(fileId, "PDF")
