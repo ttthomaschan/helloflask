@@ -13,6 +13,7 @@ FILE_STATION_UPLOAD_URL = 'http://file.sit.elimen.com.cn:8899/edfs/file/upload'
 FILE_STATION_DOWNLOAD_URL = 'http://file.sit.elimen.com.cn:8899/edfs/file/download'
 DEBUG_MODE = True
 
+''' TO DO -- input image_bytes directly'''
 def upload_file(image_path):
     # Initialize image path
     image = open(image_path, 'rb') ## 与 open(image_path, 'rb').read() 区别 ？？
@@ -38,6 +39,7 @@ def upload_file(image_path):
     else:
         return "Upload failed -- {}".format(r['msg'])
 
+'''Version _1: return '''
 def download_file(fileId, fileType):
     # Initialize image path
     data = {'fileId': fileId}
@@ -49,21 +51,18 @@ def download_file(fileId, fileType):
     if fileType == "IMAGE":
         img = cv2.imdecode(np.frombuffer(data_bytes, np.uint8), cv2.IMREAD_COLOR)
         if img is not None:
-            print("Img downloaded from file station.")
-            ## Debug:
-            cv2.imwrite("./filedown.jpeg", img)
-            return img
+            if DEBUG_MODE:
+                print("Img downloaded from file station.")
+                cv2.imwrite("./filedown.jpeg", img)
+            return [img]
         else:
             print("Fail to load img.")
-    elif fileType == "PDF" or fileType == "IMAGE":
+    elif fileType == "PDF":
         img_dataset, pages = pdfExtraction.pdf2img(r.content, zoom_x=3, zoom_y=3)
-
         return img_dataset
     elif fileType == "EXCEL":
-        excel_b = xlrd.open_workbook(file_contents=r.content, formatting_info=True)
-        # table = excel_b.sheets()[0]
-        # nrows = table.nrows
-        workbook = copy(excel_b)
+        excel_bytes = xlrd.open_workbook(file_contents=r.content, formatting_info=True)
+        workbook = copy(excel_bytes)
         workbook.save("rewrite.xls")
 
 if __name__ == '__main__':
